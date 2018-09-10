@@ -1,14 +1,16 @@
 /* @flow */
 
-// shared/util这个js文件是一些公共的方法，如isObject等
+// shared/util这个js文件是一些公共的方法，如isObject等，详细请参见具体文件
 import {
   no,
   noop,
   identity
 } from 'shared/util'
 
+//Vue的生命周期钩子
 import { LIFECYCLE_HOOKS } from 'shared/constants'
 
+//flow的type声明
 export type Config = {
   // user
   optionMergeStrategies: { [key: string]: Function };
@@ -37,35 +39,22 @@ export type Config = {
 };
 
 export default ({
-  /**
-   * Option merge strategies (used in core/util/options)
-   */
-  // $flow-disable-line
+  //Vue的自定义合并策略
   optionMergeStrategies: Object.create(null),
 
-  /**
-   * Whether to suppress warnings.
-   */
+  //是否抑制告警
   silent: false,
 
-  /**
-   * Show production mode tip message on boot?
-   */
+  //设置为false阻止vue在启动时候自动生成提示
   productionTip: process.env.NODE_ENV !== 'production',
 
-  /**
-   * Whether to enable devtools
-   */
+  //是否允许vue-devtools检查代码，需要在加载Vue之后立即同步设置
   devtools: process.env.NODE_ENV !== 'production',
 
-  /**
-   * Whether to record perf
-   */
+  //性能追踪
   performance: false,
 
-  /**
-   * Error handler for watcher errors
-   */
+  //捕获Vue声明周期函数和自定义事件函数内部错误
   errorHandler: null,
 
   /**
@@ -73,15 +62,10 @@ export default ({
    */
   warnHandler: null,
 
-  /**
-   * Ignore certain custom elements
-   */
+  //忽略Vue之外的自定义元素
   ignoredElements: [],
 
-  /**
-   * Custom user key aliases for v-on
-   */
-  // $flow-disable-line
+  //自定义键位别名
   keyCodes: Object.create(null),
 
   /**
