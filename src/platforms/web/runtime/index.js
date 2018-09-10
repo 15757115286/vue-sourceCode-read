@@ -22,21 +22,23 @@ import { patch } from './patch'
 import platformDirectives from './directives/index'
 import platformComponents from './components/index'
 
-// 给Vue.config加载平台指定的工具
+// 给Vue.config加载平台指定的工具，覆盖config中的初始化的配置
 Vue.config.mustUseProp = mustUseProp
 Vue.config.isReservedTag = isReservedTag
 Vue.config.isReservedAttr = isReservedAttr
 Vue.config.getTagNamespace = getTagNamespace
 Vue.config.isUnknownElement = isUnknownElement
 
-// install platform runtime directives & components
+// 加载平台运行时的内置指令和组件（根据平台的不同而加载不同的内容）
+// 加载了web平台全局内置指令show 和modal
 extend(Vue.options.directives, platformDirectives)
+// 加载了web平台全局内置组件transition和transition-group
 extend(Vue.options.components, platformComponents)
 
-// install platform patch function
+// 如果是在游览器运行环境下给Vue.prototype.__patch__赋值为patch函数
 Vue.prototype.__patch__ = inBrowser ? patch : noop
 
-// public mount method
+// 添加著名的Vue.prototype.$mount方法
 Vue.prototype.$mount = function (
   el?: string | Element,
   hydrating?: boolean
@@ -45,8 +47,8 @@ Vue.prototype.$mount = function (
   return mountComponent(this, el, hydrating)
 }
 
-// devtools global hook
-/* istanbul ignore next */
+//该devtools的钩子函数存在于游览器下window.__VUE_DEVTOOLS_GLOBAL_HOOK__（不一定有该函数）
+//如果存在该钩子函数并且config中开启了config.devtools代码检查，则触发钩子函数进行代码检查，否则打印出vue-devtools的下载地址
 if (inBrowser) {
   setTimeout(() => {
     if (config.devtools) {

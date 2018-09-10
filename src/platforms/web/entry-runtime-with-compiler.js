@@ -7,6 +7,8 @@ import { mark, measure } from 'core/util/perf'
 
 import Vue from './runtime/index'
 import { query } from './util/index'
+
+//运行时对Vue的处理到上面就差不多了，下面是在运行时的基础上添加compiler
 import { compileToFunctions } from './compiler/index'
 import { shouldDecodeNewlines, shouldDecodeNewlinesForHref } from './util/compat'
 
