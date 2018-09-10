@@ -15,6 +15,7 @@ import Dep, { pushTarget, popTarget } from './dep'
 
 import type { SimpleSet } from '../util/index'
 
+//watcher的id，默认是从0开始的
 let uid = 0
 
 /**
@@ -42,6 +43,7 @@ export default class Watcher {
   getter: Function;
   value: any;
 
+  //这里对应vue api中的是vm.$watch(expOrFn,callback,[options])
   constructor (
     vm: Component,
     expOrFn: string | Function,
@@ -75,7 +77,7 @@ export default class Watcher {
     this.expression = process.env.NODE_ENV !== 'production'
       ? expOrFn.toString()
       : ''
-    // parse expression for getter
+    // 解析表达式或者函数
     if (typeof expOrFn === 'function') {
       this.getter = expOrFn
     } else {
@@ -90,6 +92,7 @@ export default class Watcher {
         )
       }
     }
+    //这里猜测观测的对象是否是计算属性
     if (this.computed) {
       this.value = undefined
       this.dep = new Dep()

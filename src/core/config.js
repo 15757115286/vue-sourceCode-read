@@ -38,6 +38,7 @@ export type Config = {
   _lifecycleHooks: Array<string>;
 };
 
+//这里面的配置绝大多数是与运行平台相关的，是可以被重写的
 export default ({
   //Vue的自定义合并策略
   optionMergeStrategies: Object.create(null),

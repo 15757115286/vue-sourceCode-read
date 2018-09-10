@@ -23,7 +23,6 @@ export function initMixin (Vue: Class<Component>) {
     vm._uid = uid++
 
     let startTag, endTag
-    /* istanbul ignore if */
     // 这里的performance对应的是vue-api中全局的config的performance，开启性能追踪
     if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
       startTag = `vue-perf-start:${vm._uid}`
@@ -31,9 +30,9 @@ export function initMixin (Vue: Class<Component>) {
       mark(startTag)
     }
 
-    // a flag to avoid this being observed
+    // 一个记号来避免vm这个对象变成observed对象
     vm._isVue = true
-    // merge options
+    // 合并参数
     if (options && options._isComponent) {
       // optimize internal component instantiation
       // since dynamic options merging is pretty slow, and none of the

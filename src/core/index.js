@@ -3,8 +3,10 @@ import { initGlobalAPI } from './global-api/index'
 import { isServerRendering } from 'core/util/env'
 import { FunctionalRenderContext } from 'core/vdom/create-functional-component'
 
+//给Vue构造函数添加全局公共API
 initGlobalAPI(Vue)
 
+//下面的定义是为了进行服务端渲染做准备的
 Object.defineProperty(Vue.prototype, '$isServer', {
   get: isServerRendering
 })
@@ -21,6 +23,7 @@ Object.defineProperty(Vue, 'FunctionalRenderContext', {
   value: FunctionalRenderContext
 })
 
+//这里的值会被rollup的replace插件替换为package.json中vue的版本号
 Vue.version = '__VERSION__'
 
 export default Vue

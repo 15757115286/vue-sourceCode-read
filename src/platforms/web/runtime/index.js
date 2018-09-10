@@ -1,5 +1,8 @@
 /* @flow */
 
+//Vue存在于core文件夹下面，core文件夹下的代码和vue的核心代码，与平台无关的代码
+//Vue的过程总结起来就是在core/index下面进行了Vue构造函数自身公共函数的定义和config的设置
+//然后在core/instance/index 下面进行Vue.prototype的方法定义
 import Vue from 'core/index'
 import config from 'core/config'
 import { extend, noop } from 'shared/util'
@@ -19,7 +22,7 @@ import { patch } from './patch'
 import platformDirectives from './directives/index'
 import platformComponents from './components/index'
 
-// install platform specific utils
+// 给Vue.config加载平台指定的工具
 Vue.config.mustUseProp = mustUseProp
 Vue.config.isReservedTag = isReservedTag
 Vue.config.isReservedAttr = isReservedAttr

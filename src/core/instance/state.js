@@ -1,6 +1,7 @@
 /* @flow */
 
 import config from '../config'
+//引入观察者对象
 import Watcher from '../observer/watcher'
 import { pushTarget, popTarget } from '../observer/dep'
 import { isUpdatingChildComponent } from './lifecycle'
@@ -28,6 +29,7 @@ import {
   isReservedAttribute
 } from '../util/index'
 
+//公共的defineProperty的属性
 const sharedPropertyDefinition = {
   enumerable: true,
   configurable: true,
@@ -312,9 +314,11 @@ export function stateMixin (Vue: Class<Component>) {
   // when using Object.defineProperty, so we have to procedurally build up
   // the object here.
   const dataDef = {}
+  //下面get和set方法中的this会被修正为Vue的实例vm
   dataDef.get = function () { return this._data }
   const propsDef = {}
   propsDef.get = function () { return this._props }
+  //在开发环境中会发出告警，表明$data和$props这两个Vue原型中的属性是只读的
   if (process.env.NODE_ENV !== 'production') {
     dataDef.set = function (newData: Object) {
       warn(
@@ -330,9 +334,12 @@ export function stateMixin (Vue: Class<Component>) {
   Object.defineProperty(Vue.prototype, '$data', dataDef)
   Object.defineProperty(Vue.prototype, '$props', propsDef)
 
+  //vue api中的vm.$set方法
   Vue.prototype.$set = set
+  //vue api中的vm.$delete方法
   Vue.prototype.$delete = del
 
+  //vue api中的vm.$watch方法
   Vue.prototype.$watch = function (
     expOrFn: string | Function,
     cb: any,
