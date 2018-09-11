@@ -1,0 +1,4 @@
+#忽略node_modules文件夹上传
+/node_modules/
+#忽略vscode配置
+/.vscode/
