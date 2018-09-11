@@ -12,6 +12,7 @@ import { initLifecycle, callHook } from './lifecycle'
 import { initProvide, initInjections } from './inject'
 import { extend, mergeOptions, formatComponentName } from '../util/index'
 
+//组件的唯一，每当新增一个组件的时候会自增1
 let uid = 0
 
 // initMixin函数主体
@@ -19,27 +20,33 @@ export function initMixin (Vue: Class<Component>) {
   Vue.prototype._init = function (options?: Object) {
     // 这里的this是在new Vue里面调用的，所以this的值指向的是新创建的vue的instance
     const vm: Component = this
-    // a uid vue组件的自增uid，估计用来表示组件的唯一性
+    // vue组件的自增uid，用来表示组件的唯一性
     vm._uid = uid++
 
     let startTag, endTag
-    // 这里的performance对应的是vue-api中全局的config的performance，开启性能追踪
+    // 这里的performance对应的是vue-api中全局的config的performance，开启性能追踪:这里是性能测试开始
     if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
       startTag = `vue-perf-start:${vm._uid}`
       endTag = `vue-perf-end:${vm._uid}`
       mark(startTag)
     }
 
-    // 一个记号来避免vm这个对象变成observed对象
+    // 用来表明这是一个Vue实例，避免该对象被响应系统观测到
     vm._isVue = true
-    // 合并参数
+    // 合并参数，其中options是我们传入的参数，_isComponent是一个内部选项，只有Vue创建组件的时候才会拥有
     if (options && options._isComponent) {
       // optimize internal component instantiation
       // since dynamic options merging is pretty slow, and none of the
       // internal component options needs special treatment.
       initInternalComponent(vm, options)
     } else {
+      //如果不是以组件的形式（指的是没有_isComponent这个值）创建的话，那么会在vm实例上添加$options，等同于
+      //vue api中的vm.$options
       vm.$options = mergeOptions(
+        //这里vm.constructor指的是vm实例的构造函数，一般指向Vue。但是Vue可以被继承，所以如果
+        //使用 var Sub = Vue.extend(); var vm = new Sub(); 时候vm就指向的是Sub而不是Vue
+        
+        //这里第一个参数类似于Vue.options，第二个参数是我们传进来的参数，第三个是vm自身
         resolveConstructorOptions(vm.constructor),
         options || {},
         vm
@@ -63,6 +70,7 @@ export function initMixin (Vue: Class<Component>) {
     callHook(vm, 'created')
 
     /* istanbul ignore if */
+    //性能测试结束
     if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
       vm._name = formatComponentName(vm, false)
       mark(endTag)
@@ -94,8 +102,10 @@ export function initInternalComponent (vm: Component, options: InternalComponent
   }
 }
 
+//这里返回的是一个options对象，类似于Vue.options这样子的，如果vm是由Vue的子类构造则会复杂许多
 export function resolveConstructorOptions (Ctor: Class<Component>) {
   let options = Ctor.options
+  //下面的分支只有继承Vue的子类才有的属性
   if (Ctor.super) {
     const superOptions = resolveConstructorOptions(Ctor.super)
     const cachedSuperOptions = Ctor.superOptions

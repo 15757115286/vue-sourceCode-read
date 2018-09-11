@@ -24,7 +24,9 @@ import platformComponents from './components/index'
 
 // 给Vue.config加载平台指定的工具，覆盖config中的初始化的配置
 Vue.config.mustUseProp = mustUseProp
+//web平台的保留标签，在elements.js下。包含了html的内置标签和svg的内置标签
 Vue.config.isReservedTag = isReservedTag
+//内置属性包含了style和class2个
 Vue.config.isReservedAttr = isReservedAttr
 Vue.config.getTagNamespace = getTagNamespace
 Vue.config.isUnknownElement = isUnknownElement

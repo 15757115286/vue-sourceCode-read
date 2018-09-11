@@ -4,9 +4,28 @@
         <script src="vue.js"></script>
     </head>
     <body>
-        <h1>hello world xwt</h1>
-        <script>
-            console.log(Vue.version)
-        </script>
+       <div id="app">{{ test }}</div>
+       <script>
+           Vue.config.performance = true;
+           console.log(Vue.config);
+           var option = {
+               el:'#app',
+               data:{
+                   test:'xwt'
+               },
+               created() {
+                 console.log('this is the created funciton in the component')  
+               },
+               mixins:[
+                   {
+                       created(){
+                           console.log('i am a mixin created function and i will be invoked before the component`s hooks function')
+                       }
+                   }
+               ]
+           }
+           var vm = new Vue(option);
+           console.log(option)
+       </script>
     </body>
 </html>
