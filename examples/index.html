@@ -13,16 +13,37 @@
                data:{
                    test:'xwt'
                },
-               created() {
-                 console.log('this is the created funciton in the component')  
-               },
+               created:[
+                   function(){
+                       console.log(1);
+                       this.$nextTick(()=>{
+                           this.test = 'cm3zz'
+                       })
+                   },
+                   function(){
+                       console.log(2);
+                   },
+                   function(){
+                       console.log(3);
+                   }
+               ],
                mixins:[
                    {
                        created(){
                            console.log('i am a mixin created function and i will be invoked before the component`s hooks function')
                        }
                    }
-               ]
+               ],
+               watch:{
+                   test:[
+                       function(value,oldValue){
+                           console.log(`in one value = ${value} , oldValue = ${oldValue}`)
+                       },
+                       function(value,oldValue){
+                            console.log(`in two value = ${value} , oldValue = ${oldValue}`)
+                       }
+                   ]
+               }
            }
            var vm = new Vue(option);
            console.log(option)

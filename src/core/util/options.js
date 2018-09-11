@@ -74,7 +74,7 @@ export function mergeDataOrFn (
   vm?: Component
 ): ?Function {
   if (!vm) {
-    // 这里要明确一点，如果父选项和子选项中都没有属性，如data的时候，那么根本就不会去调用starts.data这个函数
+    // 这里要明确一点，如果父选项和子选项中都没有属性，如data的时候，那么根本就不会去调用strats.data这个函数
     // 也就不存在调用mergeDataOrFn这个函数了。所以能调用这个函数的时候必定是子选项或者父选项中存在该属性
     // 在多重继承的时候会出现子选项中不存在data属性但父选项中出现data属性的情况
 
@@ -105,6 +105,8 @@ export function mergeDataOrFn (
     // 否则返回父选项的值（如果是函数则是执行后返回的值）
     return function mergedInstanceDataFn () {
       // instance merge
+
+      //在调用函数childVal的时候传入一个参数，指向vm本身，并且函数调用时候this也是指向vm的
       const instanceData = typeof childVal === 'function'
         ? childVal.call(vm, vm)
         : childVal
@@ -150,6 +152,10 @@ strats.data = function (
 /**
  * Hooks and props are merged as arrays.
  */
+
+ // 这里有parentVal的话一定会是数组格式的。parentVal一般是从构造函数,例如Vue或者Vue的子类中的options里面的
+ // 它会在Vue.extend中mergeOptions中被处理成为数组。如果parentVal不存在，那么strats[hooks] 函数根本不会执行
+ // 从这里可以发现我们在组件中写生命周期的钩子可以是数组形式的，它会按序一个个执行下去
 function mergeHook (
   parentVal: ?Array<Function>,
   childVal: ?Function | ?Array<Function>
@@ -163,32 +169,33 @@ function mergeHook (
     : parentVal
 }
 
+//给合并策略添加每个生命周期的合并函数，每个函数都相同，都是mergeHook
 LIFECYCLE_HOOKS.forEach(hook => {
   strats[hook] = mergeHook
 })
 
-/**
- * Assets
- *
- * When a vm is present (instance creation), we need to do
- * a three-way merge between constructor options, instance
- * options and parent options.
- */
+
+ // 一般Vue中会把组件、指令和过滤器称作为资源
+ // 合并资源，当一个vm被创建的时候我们需要进行对构造函数的options，实例自身的options和上级的options
 function mergeAssets (
   parentVal: ?Object,
   childVal: ?Object,
   vm?: Component,
   key: string
 ): Object {
+  // 这里如果存在parentVal的话（通过Vue.component等创建的全局的组件或者指令）-> 正是因为有这个mergeAssets才可以全局注册
   const res = Object.create(parentVal || null)
   if (childVal) {
     process.env.NODE_ENV !== 'production' && assertObjectType(key, childVal, vm)
+    // 感觉这种混合方式比较好，没有用到递归去混合，而是通过原型链屏蔽的方式去混合对象。但是子类的同名属性会屏蔽掉原型链上父类的属性
     return extend(res, childVal)
   } else {
     return res
   }
 }
 
+// 给 filters、components、directives添加合并策略，合并策略函数都是mergeAssets
+// 添加策略 strates.filters、strats.components、strats.directives 
 ASSET_TYPES.forEach(function (type) {
   strats[type + 's'] = mergeAssets
 })
@@ -199,23 +206,38 @@ ASSET_TYPES.forEach(function (type) {
  * Watchers hashes should not overwrite one
  * another, so we merge them as arrays.
  */
+
+ // 同样的这里watch的写法中如果parentVal和childVal都存在那么到最后观察的字段的回调都会被处理成为一个数组，包含着这些回调函数
 strats.watch = function (
   parentVal: ?Object,
   childVal: ?Object,
   vm?: Component,
   key: string
 ): ?Object {
-  // work around Firefox's Object.prototype.watch...
+
+  // 下面两句是为了兼容火狐游览器的。因为火狐游览器在Object.prototype中会有一个watch
+  // 所以如果parentVal或者childValue中和源生的nativeWathc相等的话，就是证明parentVal和childVal是不需要的
   if (parentVal === nativeWatch) parentVal = undefined
   if (childVal === nativeWatch) childVal = undefined
-  /* istanbul ignore if */
+
+  // 如果没有childVal就直接返回一个空对象或者是以parentVal为原型的空对象
   if (!childVal) return Object.create(parentVal || null)
+
+  // 如果在非生产环境则进行类型的判断
   if (process.env.NODE_ENV !== 'production') {
     assertObjectType(key, childVal, vm)
   }
+
+  // 如果没有parentVal就直接返回子选项
   if (!parentVal) return childVal
+
+  // 如果parentVal和childVal都存在，那么ret就是合并后的结果
   const ret = {}
+
+  // 把parentVal中的键值对混入到ret中
   extend(ret, parentVal)
+
+  // 如果都存在，那么把这些属性都处理成数组格式的回调
   for (const key in childVal) {
     let parent = ret[key]
     const child = childVal[key]
@@ -229,9 +251,9 @@ strats.watch = function (
   return ret
 }
 
-/**
- * Other object hashes.
- */
+
+// props、methods、inject和computed的合并策略，且这四个属性都是纯对象
+// 前3个对象都会被normalize成纯对象，在书写的时候可以为数组或者其他格式，但是computed在书写的时候就只能为对象
 strats.props =
 strats.methods =
 strats.inject =
@@ -241,15 +263,28 @@ strats.computed = function (
   vm?: Component,
   key: string
 ): ?Object {
+  //如果不是生产环境需要进行类型的检测
   if (childVal && process.env.NODE_ENV !== 'production') {
     assertObjectType(key, childVal, vm)
   }
+
+  // 这里的原理同上，parentVal和childVal必定是会存在一个的，如果都不存在，那么是不会进行策略的合并的
+  // 如果不存在parentVal，那么就返回childVal
   if (!parentVal) return childVal
+
+  // 如果parentVal存在，那么创建一个空对象作为ret，作为最后的返回值使用
   const ret = Object.create(null)
+
+  // 把parnetVal的键值对混入到ret中
   extend(ret, parentVal)
+
+  // 如果childVal存在的话，把childVal的键值对混入到ret中，这里值得注意的是,extend混入的时候只是把键值对强制的混入不会做判断
+  // 这里导致的结果就是childVal中的props、methods、inject、computed的属性会覆盖掉同名的parentVal的属性
   if (childVal) extend(ret, childVal)
   return ret
 }
+
+// provide的合并的策略就是mergeDataOrFn。这个和data的合并策略是相同的，都是返回调用mergeDataOrFn的结果
 strats.provide = mergeDataOrFn
 
 //默认的合并策略，优先返回子选项的值，如果该值不存在，降为返回父选项的值
@@ -378,6 +413,9 @@ function normalizeDirectives (options: Object) {
   }
 }
 
+
+// 如果判断的value不是纯对象就会产生告警
+// 这个的一个用途就是会在非生产环境下用于判断options中filters、components、和directives的类型。必须是纯对象
 function assertObjectType (name: string, value: any, vm: ?Component) {
   if (!isPlainObject(value)) {
     warn(
@@ -404,7 +442,7 @@ export function mergeOptions (
     checkComponents(child)
   }
 
-  //同样可以合并通过继承Vue的子类的参数
+  //同样可以合并通过继承Vue的子类的参数。比如说options.extends可以传入一个继承的构造函数（vue api中extends的例子），这个时候就需要要到这行代码
   if (typeof child === 'function') {
     child = child.options
   }
@@ -433,10 +471,19 @@ export function mergeOptions (
   const options = {}
   //这里的key指的是选项中类似components,filters,directives这样的属性
   let key
+
+  // 其实在这之前还没有进行属性的合并，只是进行了一些对象格式或者类型的检查操作和序列化而已，真正的合并是下面的操作
+
+  // 下面如果某个key既不存在与parentVal和childVal，那么就不会进行策略的合并
+
+  // 先把parentVal的属性合并到最终的options内
   for (key in parent) {
     mergeField(key)
   }
+
+  // 再把childVal中存在但是parentVal中不存在的属性进行合并
   for (key in child) {
+    // 这里使用hasOwn是否和filters、components、directives的原型链混入有关？有待验证
     if (!hasOwn(parent, key)) {
       mergeField(key)
     }
