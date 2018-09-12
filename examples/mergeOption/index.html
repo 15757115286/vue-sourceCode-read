@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>merge option test</title>
+    <script src="../vue.js"></script>
+</head>
+
+<body>
+    <h1> this is the vue merge option test</h1>
+    <script>
+        var Super1 = Vue.extend({
+            data() {
+                return {
+                    info: {
+                        native: 'china'
+                    }
+                }
+            },
+            created() {
+                let info = 'this is the Super constructor';
+                console.log(info);
+            },
+            components: {
+                cp1: {
+                    name: 'cp1',
+                    data() {
+                        return {
+                            name: 'xwt'
+                        }
+                    }
+                }
+            },
+            props:{
+                test:{
+                    type:Number,
+                    default:1
+                }
+            }
+        })
+
+        var vm = new Vue({
+            extends: Super1,
+            mixins: [
+                {
+                    data() {
+                        return {
+                            info: {
+                                name: 'xwt',
+                                age: 18
+                            }
+                        }
+                    },
+                    created() {
+                        let info = 'this is the mixins';
+                        console.log(info);
+                    },
+                    components: {
+                        cp1: {
+                            name: 'cp2',
+                            data() {
+                                return {
+                                    name: 'xwt'
+                                }
+                            }
+                        }
+                    },
+                    mixins: [
+                        {
+                            data() {
+                                return {
+                                    company: 'ytl'
+                                }
+                            },
+                            components: {
+                                cp1: {
+                                    name: 'cp4',
+                                    data() {
+                                        return {
+                                            name: 'xwt'
+                                        }
+                                    }
+                                },
+                                cp2: {
+                                    name: 'cp5',
+                                    data() {
+                                        return {
+                                            name: 'xwt'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ],
+            created() {
+                console.log('this is the created in the instance self')
+            },
+            data: {
+                info: {
+                    city: 'dsx'
+                }
+            },
+            components: {
+                cp1: {
+                    name: 'cp3',
+                    data() {
+                        return {
+                            name: 'xwt'
+                        }
+                    }
+                }
+            },
+            props:{
+                test:{
+                    type:Boolean,
+                    default:false 
+                },
+                test1:Number
+            }
+        })
+        console.log(vm.$options);
+    </script>
+</body>
+
+</html>

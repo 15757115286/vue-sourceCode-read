@@ -40,8 +40,10 @@ export function initMixin (Vue: Class<Component>) {
       // internal component options needs special treatment.
       initInternalComponent(vm, options)
     } else {
-      //如果不是以组件的形式（指的是没有_isComponent这个值）创建的话，那么会在vm实例上添加$options，等同于
-      //vue api中的vm.$options
+      // 如果不是以组件的形式（指的是没有_isComponent这个值）创建的话，那么会在vm实例上添加$options，等同于
+      // vue api中的vm.$options.
+      // mergeOption的主要功能就是将options中的data、props、computed、inject、provide、methods、自定义等等属性
+      // 按照默认或者官方固定的或者自定义的方式进行合并，待以后使用。（这个字段是可以更改的）
       vm.$options = mergeOptions(
         //这里vm.constructor指的是vm实例的构造函数，一般指向Vue。但是Vue可以被继承，所以如果
         //使用 var Sub = Vue.extend(); var vm = new Sub(); 时候vm就指向的是Sub而不是Vue
@@ -53,15 +55,26 @@ export function initMixin (Vue: Class<Component>) {
       )
     }
     /* istanbul ignore else */
+    // 在非生产环境下访问 vm 中属性如果不存在给出友好的提示（拦截的是 in 操作，但是可以拦截 with 下属性的访问）
+    // 如果是在vue-loader的情况下拦截的是get操作，因为此时render中的_withStripped会被设置为true
     if (process.env.NODE_ENV !== 'production') {
       initProxy(vm)
     } else {
       vm._renderProxy = vm
     }
-    // expose real self
+
+    // 把自己用_self字段暴露出来
+    // 这里注意的是vm._self 和 vm._renderProxy是不同的。因为这两者的用途是不同的。
+    // 并且vm._renderProxy可能是一个代理对象（通过new Proxy）
     vm._self = vm
+
+    // 初始化声明周期，确定父子关系和添加相关属性，如$children、$parent和$refs等等
     initLifecycle(vm)
+
+    // 初始化事件
     initEvents(vm)
+
+
     initRender(vm)
     callHook(vm, 'beforeCreate')
     initInjections(vm) // resolve injections before data/props

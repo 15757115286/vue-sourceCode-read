@@ -22,10 +22,22 @@ export let activeInstance: any = null
 export let isUpdatingChildComponent: boolean = false
 
 export function initLifecycle (vm: Component) {
-  const options = vm.$options
 
-  // locate first non-abstract parent
+  // 获取组件实例已经合并完成的options属性
+  const options = vm.$options
+  // 定位第一个不是抽象组件的父组件
+
+  // 获取指定已经创建的父实例如果有的话
   let parent = options.parent
+
+  // 如果存在父实例，迭代查找第一个不是抽象的父实例，并建立父子关系
+
+  // 所谓的抽象组件实例的特点（通过vm.$options.abstract = true 指定）就是不会渲染真实的DOM，
+  // 其次就是不会出现在父子关系的路径上
+  // 如果一个实例是抽象实例（如keep-alive），那么直接把options.parent设置为该抽象组件的$parent属性
+  // 并且不会再往父组件的$children中推入自身的实例。
+  // 如果该实例不是抽象实例，那么找到第一个不是抽象组件实例的父实例（因为抽象组件的实例不能够也不应该作为父级的）
+  // 并和当前实例建立父子关系
   if (parent && !options.abstract) {
     while (parent.$options.abstract && parent.$parent) {
       parent = parent.$parent
@@ -33,12 +45,18 @@ export function initLifecycle (vm: Component) {
     parent.$children.push(vm)
   }
 
+  // 在vm实例对象上创建$parent属性并且将不是抽象组件的父实例或者undefiend赋值给它
   vm.$parent = parent
+
+  // 将该实例的$root设置为父实例的$root或者本身
   vm.$root = parent ? parent.$root : vm
 
+  // vue api中的vm.$children。 $children并不保证顺序，也不是响应式的（摘自——vue api文档 vm.$children）
   vm.$children = []
+  // vue api中的vm.$refs。 $refs是一个对象，持有注册过ref特性的所有DOM元素和组件实例（摘自——vue api文档 vm.refs）
   vm.$refs = {}
 
+  // 和声明周期相关的一些vm自身的属性
   vm._watcher = null
   vm._inactive = null
   vm._directInactive = false
