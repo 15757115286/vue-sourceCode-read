@@ -31,7 +31,20 @@
                     render(h){
                         return h('h1','生命周期钩子测试');
                     },
+                    data(){
+                        return {
+                            test:'333'
+                        }
+                    },
+                    extends:{
+                        data(){
+                            return {
+                                test:444
+                            }
+                        }
+                    },
                     created(){
+                        console.log(this);
                         console.log(this._hasHookEvent)
                         console.log('子组件自己的created哦')
                     }
