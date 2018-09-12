@@ -77,10 +77,16 @@ export function initMixin (Vue: Class<Component>) {
     // 初始化渲染，为vm新增$slots、$scopedSlots、$createElement、$attrs、$listeners等字段
     initRender(vm)
 
+    // 调用beforeCreated钩子函数。这里意外的获取了可以用@hook:created类似的方法来监听子组件的生命周期钩子函数
+    // 这个可以在官方文档中没有体现的
     callHook(vm, 'beforeCreate')
+
+    // 初始化自己注入的内容
     initInjections(vm) // resolve injections before data/props
     initState(vm)
     initProvide(vm) // resolve provide after data/props
+
+    // 调用created钩子函数，这个时候组件的数据已经注入完成，可以放心食用
     callHook(vm, 'created')
 
     /* istanbul ignore if */

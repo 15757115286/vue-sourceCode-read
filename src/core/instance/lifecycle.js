@@ -332,7 +332,13 @@ export function deactivateChildComponent (vm: Component, direct?: boolean) {
 
 export function callHook (vm: Component, hook: string) {
   // #7573 disable dep collection when invoking lifecycle hooks
+  // 开头的pushTarget和结尾的popTarget是为了避免在调用生命周期钩子的时候冗余的收集依赖
   pushTarget()
+
+  // 注意这里的vm.$options是已经经过mergeOptions合并过的，也就是说其中已经合并了自身
+  // 和extends、mixins中的所有的钩子函数了（如果有的话）
+
+  // 获取对应名称的钩子函数,这里获取到的钩子函数要么是undefined，要么是一个数组（哪怕只包含一个函数）
   const handlers = vm.$options[hook]
   if (handlers) {
     for (let i = 0, j = handlers.length; i < j; i++) {
@@ -343,8 +349,15 @@ export function callHook (vm: Component, hook: string) {
       }
     }
   }
+
+  // 如果vm中的_hasHookEvent为true，那么还会触发对应的hooks事件
+  // _hasHookEvent是在initEvents中函数定义的，用来判断是否存在生命周期钩子的事件侦听器
+  // 我们可以用 @hook:created = "handle" 来侦听生命周期钩子（——摘自Vue技术内幕）
+  // 经过自己测试以后总结的得出我们可以在父组件中通过@hook:created来监听子组件的生命钩子执行过程
+  // 比如说我某个操作要在子组件挂载以后才能执行，那么我们可以监听子组件的@hook:mounted这个过程
   if (vm._hasHookEvent) {
     vm.$emit('hook:' + hook)
   }
+
   popTarget()
 }

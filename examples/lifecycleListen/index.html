@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>lifecycle event listen in template</title>
+    <script src="../vue.js"></script>
+</head>
+<body>
+    <div id="app">
+        <my-h1 @hook:created="showInfo"></my-h1>
+    </div>
+    <script>
+        var h1 = null;
+        var vm = new Vue({
+            el:'#app',
+            data:{
+                test:'生命周期钩子事件监听'
+            },
+            methods:{
+                showInfo(){
+                    console.log('listen lifecycle hook')
+                }
+            },
+            created() {
+                console.log('父实例的created')
+            },
+            components:{
+                MyH1:{
+                    render(h){
+                        return h('h1','生命周期钩子测试');
+                    },
+                    created(){
+                        console.log(this._hasHookEvent)
+                        console.log('子组件自己的created哦')
+                    }
+                }
+            }
+        })
+        // 这里面的_hasHookEvent是用来判断一个组件是否已经加载（如果监听的是mounted声明周期钩子）完毕
+        console.log(vm);
+    </script>
+</body>
+</html>
