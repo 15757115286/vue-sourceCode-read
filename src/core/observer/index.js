@@ -16,6 +16,8 @@ import {
   isServerRendering
 } from '../util/index'
 
+// 这里arrayKeys的值位一个数组，包含了以下的内容
+// push pop shift unshift sort reserve splice 这7个可以改变数组内容的方法名
 const arrayKeys = Object.getOwnPropertyNames(arrayMethods)
 
 /**
@@ -34,6 +36,8 @@ export function toggleObserving (value: boolean) {
  * object's property keys into getter/setters that
  * collect dependencies and dispatch updates.
  */
+
+// 这里的value应该是一个对象或者是一个数组 
 export class Observer {
   value: any;
   dep: Dep;
@@ -41,10 +45,21 @@ export class Observer {
 
   constructor (value: any) {
     this.value = value
+    // 定义一个收集依赖的框
     this.dep = new Dep()
     this.vmCount = 0
+    // 定义一个不可枚举的__ob__属性
     def(value, '__ob__', this)
     if (Array.isArray(value)) {
+
+      // hasProto是指对象是否可以直接获取自己的原型链 __proto__
+
+      // 这里的区别就是如果可以使用 __proto__ 去改变原型链的话，
+      // 那么直接把数组array的原型链指向arrayMethods（一个对象，该对象的原型链还是数组的原型，
+      // 但是对象中有7个可以改变数组属性的方法覆盖掉了数组原型链中的方法）
+
+      // 如果不能使用__proto__改变原型链的话，就把arrayMethods中的重写过的7个可以改变数组内容的方法代理到value数组上
+      // 并原型链屏蔽掉数组原型中的方法（如push、pop、splice等）
       const augment = hasProto
         ? protoAugment
         : copyAugment
@@ -55,11 +70,9 @@ export class Observer {
     }
   }
 
-  /**
-   * Walk through each property and convert them into
-   * getter/setters. This method should only be called when
-   * value type is Object.
-   */
+ 
+  // 遍历对象中的每个属性去把它转化成getter/setter的形式。
+  // 这个方法只有当obj为对象的时候才应当被调用
   walk (obj: Object) {
     const keys = Object.keys(obj)
     for (let i = 0; i < keys.length; i++) {
@@ -67,9 +80,7 @@ export class Observer {
     }
   }
 
-  /**
-   * Observe a list of Array items.
-   */
+  // 尝试把数组中的每项都去创建一个可观察对象
   observeArray (items: Array<any>) {
     for (let i = 0, l = items.length; i < l; i++) {
       observe(items[i])
@@ -77,22 +88,15 @@ export class Observer {
   }
 }
 
-// helpers
 
-/**
- * Augment an target Object or Array by intercepting
- * the prototype chain using __proto__
- */
+// 如果可以使用__proto__的话，把__proto__指向src来改变target的原型链
 function protoAugment (target, src: Object, keys: any) {
   /* eslint-disable no-proto */
   target.__proto__ = src
   /* eslint-enable no-proto */
 }
 
-/**
- * Augment an target Object or Array by defining
- * hidden properties.
- */
+// 用迭代的形式把src中存在于keys中的所有key的内容都代理到target上，并且这些值都是不可枚举的
 /* istanbul ignore next */
 function copyAugment (target: Object, src: Object, keys: Array<string>) {
   for (let i = 0, l = keys.length; i < l; i++) {
@@ -101,19 +105,26 @@ function copyAugment (target: Object, src: Object, keys: Array<string>) {
   }
 }
 
-/**
- * Attempt to create an observer instance for a value,
- * returns the new observer if successfully observed,
- * or the existing observer if the value already has one.
- */
+
+ // 尝试为一个值去创建一个可观察的对象。如果创建成功则返回新建的可观察对象。
+ // 如果value中已经存在一个可观察对象则返回该可观察对象
 export function observe (value: any, asRootData: ?boolean): Observer | void {
+
+  // 如果不是对象或者该value是一个VNode实例，那么直接返回
   if (!isObject(value) || value instanceof VNode) {
     return
   }
   let ob: Observer | void
+  // 如果value自身中已经存在一个Observer类型的__ob__，那么ob就直接为__ob__
+  // 这里主要的作用是避免重复观测一个数据对象
   if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
     ob = value.__ob__
   } else if (
+    // 否则的话，如果shouldObserve并且不是服务端渲染并且value是一个数组或者一个可扩展的不是Vue实例的纯对象
+    // 就新建一个可观察的实例
+
+    // 这里的shouldObserve相当于是一个开关，可以动态的改变我们的对象是否是可观测的。因为在某些情况下我们需要
+    // value是不可观测的
     shouldObserve &&
     !isServerRendering() &&
     (Array.isArray(value) || isPlainObject(value)) &&
@@ -122,15 +133,17 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
   ) {
     ob = new Observer(value)
   }
+
+  // 如果是根元素并且有观察对象，那么vmCount值加1
   if (asRootData && ob) {
     ob.vmCount++
   }
+
+  // 返回可观察对象ob
   return ob
 }
 
-/**
- * Define a reactive property on an Object.
- */
+// 在一个对象中定义一个响应式的属性
 export function defineReactive (
   obj: Object,
   key: string,
@@ -140,12 +153,16 @@ export function defineReactive (
 ) {
   const dep = new Dep()
 
+  // 获取对象中对应属性的描述符
   const property = Object.getOwnPropertyDescriptor(obj, key)
+
+  // 如果可以获取到属性的描述符并且该属性是不可配置，那么直接返回
+  // 这里也是为什么vue api中说明了如果一个对象使不可配置的，那么不会有响应性
   if (property && property.configurable === false) {
     return
   }
 
-  // cater for pre-defined getter/setters
+  // 这里暂存对应属性的set和get
   const getter = property && property.get
   const setter = property && property.set
   if ((!getter || setter) && arguments.length === 2) {
