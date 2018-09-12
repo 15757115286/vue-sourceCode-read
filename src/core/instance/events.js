@@ -13,6 +13,8 @@ export function initEvents (vm: Component) {
   vm._events = Object.create(null)
   vm._hasHookEvent = false
   // init parent attached events
+
+  // vm.$options._parentListeners这个字段会在创建子组件实例的时候被添加
   const listeners = vm.$options._parentListeners
   if (listeners) {
     updateComponentListeners(vm, listeners)

@@ -71,11 +71,12 @@ export function initMixin (Vue: Class<Component>) {
     // 初始化声明周期，确定父子关系和添加相关属性，如$children、$parent和$refs等等
     initLifecycle(vm)
 
-    // 初始化事件
+    // 初始化事件，这就是我们可以使用一个vm来充当eventBus的原因
     initEvents(vm)
 
-
+    // 初始化渲染，为vm新增$slots、$scopedSlots、$createElement、$attrs、$listeners等字段
     initRender(vm)
+
     callHook(vm, 'beforeCreate')
     initInjections(vm) // resolve injections before data/props
     initState(vm)

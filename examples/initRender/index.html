@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>init render example</title>
+    <script src="../vue.js"></script>
+</head>
+<body>
+    <div id="app">
+        <my-h1 abc='xwt' def='cm' style="color:red;" class="my-h1"></my-h1>
+    </div>
+    <script>
+        var myh1 = null;
+        var vm = new Vue({
+            el:'#app',
+            components:{
+                MyH1:{
+                    props:{
+                        def:String
+                    },
+                    render(h){
+                        return h('h1',this.def)
+                    },
+                    created() {
+                        myh1 = this;
+                    }
+                }
+            }
+        })
+        /*
+            myh1.$attrs : { abc:'xwt' }
+            myh1.$props : { def:'cm' } 当前这里的对象是响应式的，这里只是简写
+            这里就证明了$attrs 可以获取到没有在组件的props中声明的内容（style和class除外，这两个是vue内部保留的特性）
+         */
+        console.log(myh1.$attrs,myh1.$props)
+    </script>
+</body>
+</html>
