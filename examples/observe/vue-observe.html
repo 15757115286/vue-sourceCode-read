@@ -13,6 +13,10 @@
     <h1>vue observe example</h1>
     <div id="app">
         {{ array[0] }}
+        <br>
+        {{ job.name3 || 'kong'}}
+        <br>
+        {{ array }}
     </div>
     <script>
         var vm = new Vue({
@@ -30,16 +34,18 @@
                 array:[1,2,3]
             },
             watch: {
-                'job.name1': function myWatch(newValue, oldValue) {
+                /* 'job.name1': function myWatch(newValue, oldValue) {
                     console.log(`属性job.name1发生了变化，新值为${newValue}，旧值为${oldValue}`);
-                }
+                } */
             },
             created() {
                 console.log(this.job)
             }
         })
         //vm.job.name1 = 'c++'
-        Vue.set(vm.job,'name3','c#');
+        setTimeout(()=>{
+            Vue.set(vm.job,'name3','c#');
+        },1000)
         vm.array.splice(0,0,'xwt')
     </script>
 </body>

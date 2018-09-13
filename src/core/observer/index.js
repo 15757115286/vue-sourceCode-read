@@ -163,6 +163,8 @@ export function defineReactive (
 ) {
   // vue中把手机的依赖dep放在闭包中定义为私有变量，没有公开开放
   // 每一个字段都通过闭包引用着属于自己的dep常量
+  // 补充：这个被必闭包reactiveGetter和reactiveSetter引用的依赖“框”只有当
+  // 属性值被修改或者获取的时候用到
   const dep = new Dep()
 
   // 获取对象中对应属性的描述符
@@ -194,21 +196,30 @@ export function defineReactive (
   // （摘自 —— vue技术内幕）
 
   // 闭包里面引用的childOb可观测对象就是obj[key].__ob__（如果有的话）
+  // 补充：这里的childOb如果存在，那么收集到的依赖和常量dep的依赖是相同的。
+  // 这里的作用是当使用Vue.set或者vm.$set的时候触发依赖
   let childOb = !shallow && observe(val)
+  // 这里在vue通过getter进行依赖收集的时候预定义的所有对象和数组都已经创建了自己对象的dep
   Object.defineProperty(obj, key, {
     enumerable: true,
     configurable: true,
     get: function reactiveGetter () {
       const value = getter ? getter.call(obj) : val
       if (Dep.target) {
-        // 这里的依赖是改属性的依赖，在属性的值改变的时候触发该依赖
+        // 这里的依赖是该属性的依赖，在属性的值改变的时候触发该依赖
         dep.depend()
         if (childOb) {
           // 这里的childOb如果存在就是val.__ob.__，这里也需要收集依赖。
           // 因为如果没有源生的Proxy的话，那么vue是无法自动监听在对象上新增一个值的。
           // 所以这里收集依赖到childOb.dep里面，然后在Vue.set里面触发childOb.dep就可以
           // 这就是Vue.set或者$set可以在添加属性的同时触发依赖的原因
+
+          // 但是需要注意的是如果此时的val是一个数组，那么childOb就是val.__ob__，这个值还有印象吗？
+          // 没错，就是我们在改变数组内容的7个方法里面就是通过this.__ob__.dep.notify()来触发依赖的
+          // 所以说我们对修改数组内容的依赖操作到这里就收集完成了
           childOb.dep.depend()
+
+          // 上面说到数组内容的改变的操作已经完成，那么下面的dependArray是干嘛的呢？
 
           // 这里因为依赖了一个数组，所以说就等于依赖了数组中的每一项。因为数组的访问是没有拦截器的，
           // 所以我们需要动过手动的去dependArray的方式去将这个对应的依赖添加到数组的每一项的依赖中去
@@ -227,6 +238,8 @@ export function defineReactive (
       /* eslint-disable no-self-compare */
       // 这一步是与原值作比较，如果新的值和老的值相等（或者两个值都为NaN）
       // 那么这里直接返回，并且不需要触发依赖
+      // 如果这里的value是一个对象或者数组，那么只有当这个数组或者对象的指引改变的时候
+      // 才会触发dep.notify，去触发依赖
       if (newVal === value || (newVal !== newVal && value !== value)) {
         return
       }
@@ -256,6 +269,7 @@ export function defineReactive (
 
  // vue无法检测到一个对象的属性新增，为了解决这一困扰，新增Vue.set方法
  // 在一个对象上设置一个属性。如果这个属性不存在对象上那么新增这个属性并且触发依赖
+ // 调用set的时候是触发target上的依赖而不是新增属性的依赖
 export function set (target: Array<any> | Object, key: any, val: any): any {
 
   // 在非生产环境下如果设置的对象是undefined、null、或者基本类型，那么会产生告警。
@@ -358,6 +372,15 @@ export function del (target: Array<any> | Object, key: any) {
  * we cannot intercept array element access like property getters.
  */
 
+// 当数组被获取的时候我们队数组上的每一个元素进行依赖的收集，因为我们不能设置项属性拦截器的方式去访问数组的元素
+// 这里面记得数组和对象处理的差异吗？如果是一个数组，那么我们只会通过迭代来对是对象或数组的数组项进行observe操作
+// 但是如果是对象，那么会对对象的每一个property进行defineReactive操作，但是别忘记了，defineReactive也会进行observe操作的。
+// 所以唯一的区别是数组无法通过像 array[0]这样的方式来收集依赖。
+// 这里假设数据格式为 data:{ array:[1,2,{ name:'xwt' } , [3,4,5]] }
+// 而且如果我们动态的为数组中的一个对象或者数组设置一个通过Vue.set，如Vue.set(array[2],'age',18)
+// 此时认为数组是发生改变了的，因为数组中的内容发生了改变，但是数组是无法监听到的。因为Vue.set触发的。
+// 调用Vue.set的时候会触发对象的__ob__上的所有依赖，所以我们需要把修改数组的依赖放置到对象的__ob__上
+// 这就是dependArray的由来
 function dependArray (value: Array<any>) {
   for (let e, i = 0, l = value.length; i < l; i++) {
     e = value[i]
