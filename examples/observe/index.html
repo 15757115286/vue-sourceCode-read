@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>observe example</title>
+    <script src="../vue.js"></script>
+</head>
+<body>
+    <h1>please turn on the developer tools</h1>
+    <script>
+        // 这里写一个比较简单的响应式例子，只针对于对象
+        let data = {
+            name : 'xwt',
+            age: 18,
+            job:{
+                jobName1:'java',
+                jobName2:'javascript'
+            }
+        }
+        function isPlainObj(val){
+            return Object.prototype.toString.call(val) == '[object Object]';
+        }
+
+        function def(obj,key,val,enumerable){
+            let descriptor = {
+                value:val,
+                enumerable:!!enumerable,
+                configurable:true,
+                writable:true
+            }
+            Object.defineProperty(obj,key,descriptor);
+        }
+
+        // 收集对象依赖的帮助函数
+        function Dep(){
+            this.dep = [];
+        }
+
+        Dep.prototype.pushTarget = function pushTarget(target){
+            if(typeof target == 'function') this.dep.push(target);
+        }
+
+        Dep.prototype.notify = function notify(obj,value,oldValue,key){
+            for(let i = 0,len = this.dep.length; i < len; i++){
+                this.dep[i].call(obj,value,oldValue,key)
+            }
+        }
+
+        function observe(obj){
+            for(let key in obj){
+                defineReactive(obj,key);
+            }
+        }
+
+        // 对纯对象val的key属性添加响应性
+        function defineReactive(obj, key){
+            if(!isPlainObj(obj)) return
+            let descriptor = Object.getOwnPropertyDescriptor(obj,key);
+            // 参考vue只能对可配置的属性进行响应式的添加
+            if( descriptor && descriptor.configurable == false) return;
+            if(obj.__ob__ === undefined) def(obj,'__ob__',{});
+            let dep = obj.__ob__[key] = new Dep();
+            let value = descriptor && descriptor.value;
+            const getter = descriptor && descriptor.get;
+            const setter = descriptor && descriptor.set;
+
+            Object.defineProperty(obj,key,{
+                set(newVal){
+                    let val = null;
+                    if(setter){
+                        val = setter.call(this,newVal);
+                    }else{
+                        val = newVal;
+                    }
+                    if(val == value) return void console.log(`相同的赋值不触发依赖，值${value}`);
+                    observe(val);
+                    let oldVal = value;
+                    value = val;
+                    // 通知进行依赖触发
+                    dep.notify(obj,value,oldVal,key);
+                },
+                get(){
+                    // 进行依赖收集
+                    if(Dep.target) dep.pushTarget(Dep.target);
+                    if(getter){
+                        return getter.call(this);
+                    }else{
+                        return value;
+                    }
+                }
+            });
+        }
+
+        function $watch(obj,key,cb){
+            if(!obj.__ob__) observe(obj);
+            Dep.target = cb;
+            obj[key];
+            Dep.target = null;
+        }
+
+        function $watchAll(obj,cb){
+            for(let key in obj){
+                $watch(obj,key,cb);
+                if(isPlainObj(obj[key])) $watchAll(obj[key],cb);
+            }
+        }
+
+        $watchAll(data,function(val,oldValue,key){
+            console.log(`来自于全部观测属性，属性名${key}，新值${val}，老值${oldValue}`);
+        })
+        $watch(data,'name',function(value,oldVal){
+            console.log(`字段name的值发生改变，新值${value}，老值${oldVal}`)
+        })
+
+        data.name = 'cm'
+        data.age = 22;
+        // 相同的值不触发依赖
+        data.age = 22;
+        data.age = 18;
+        // 深度观察
+        console.log('对象的子对象深度观察');
+        data.job.jobName1 = 'c++';
+        data.job.jobName2 = 'c#';
+    </script>
+</body>
+</html>
