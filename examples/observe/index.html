@@ -8,7 +8,7 @@
     <script src="../vue.js"></script>
 </head>
 <body>
-    <h1>please turn on the developer tools</h1>
+    <h1>please turn on the chrome developer tools</h1>
     <script>
         // 这里写一个比较简单的响应式例子，只针对于对象
         let data = {
@@ -97,6 +97,8 @@
             if(!obj.__ob__) observe(obj);
             Dep.target = cb;
             obj[key];
+            // 否则在递归watchAll的时候去访问某个属性之前的监听方法会被再次添加
+            // 在$watchAll(obj[key],cb)的时候回去访问key这个属性被拦截
             Dep.target = null;
         }
 
