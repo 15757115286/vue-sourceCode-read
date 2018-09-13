@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>vue observe example</title>
+    <script src="../vue.js"></script>
+</head>
+
+<body>
+    <h1>vue observe example</h1>
+    <div id="app">
+        {{ array[0] }}
+    </div>
+    <script>
+        var vm = new Vue({
+            el:'#app',
+            data: {
+                name: 'xwt',
+                job: {
+                    name1: 'javascript',
+                    name2: 'java'
+                },
+                interests:{
+                    in1:'play games',
+                    in2:'play basketball'
+                },
+                array:[1,2,3]
+            },
+            watch: {
+                'job.name1': function myWatch(newValue, oldValue) {
+                    console.log(`属性job.name1发生了变化，新值为${newValue}，旧值为${oldValue}`);
+                }
+            },
+            created() {
+                console.log(this.job)
+            }
+        })
+        //vm.job.name1 = 'c++'
+        Vue.set(vm.job,'name3','c#');
+        vm.array.splice(0,0,'xwt')
+    </script>
+</body>
+
+</html>

@@ -68,13 +68,14 @@
 
             Object.defineProperty(obj,key,{
                 set(newVal){
-                    let val = null;
+                    let val = getter ? getter.call(obj) : value;
+                    if(val == newVal) return void console.log(`相同的赋值不触发依赖，值${value}`);
+                    // 之前的写法是有问题的，一般getter是不会return值的
                     if(setter){
-                        val = setter.call(this,newVal);
+                        setter.call(obj,newVal);
                     }else{
                         val = newVal;
                     }
-                    if(val == value) return void console.log(`相同的赋值不触发依赖，值${value}`);
                     observe(val);
                     let oldVal = value;
                     value = val;
@@ -115,6 +116,9 @@
         $watch(data,'name',function(value,oldVal){
             console.log(`字段name的值发生改变，新值${value}，老值${oldVal}`)
         })
+        $watch(data,'name',function(value,oldVal){
+            console.log(`又一个name字段监测回调，新值${value}，老值${oldVal}`)
+        })
 
         data.name = 'cm'
         data.age = 22;
@@ -125,6 +129,26 @@
         console.log('对象的子对象深度观察');
         data.job.jobName1 = 'c++';
         data.job.jobName2 = 'c#';
+
+        //数组的下标访问触发不了setter和getter的
+        let array = [1,2,3];
+        function myDefine(obj,key){
+            let value = obj[key];
+            Object.defineProperty(obj,key,{
+                set(newValue){
+                    console.log('触发set')
+                    value = newValue;
+                },
+                get(){
+                    console.log('触发了get');
+                    return value;
+                }
+            })
+        }
+        for(let i = 0,len = array.length;i < len ;i++){
+            myDefine(array,i.toString());
+        }
+        console.log(array[0],array[1],array[2]);
     </script>
 </body>
 </html>

@@ -32,6 +32,7 @@ methodsToPatch.forEach(function (method) {
   def(arrayMethods, method, function mutator (...args) {
     // 这里执行源生的数组操作
     const result = original.apply(this, args)
+    // 这里数组的依赖是没有通过setter/getter去拦截的
     const ob = this.__ob__
     let inserted
     // 这里如果是push或者unshift方法，那么新增的内容就是args。
@@ -50,7 +51,7 @@ methodsToPatch.forEach(function (method) {
     // 所以说inserted的值如果存在就必定地数组
     if (inserted) ob.observeArray(inserted)
 
-    // 依赖的更新
+    // 因为调用了变异数组的方法，数组的结构改变，依赖的更新
     ob.dep.notify()
     // 返回源生数组方法操作后的结果
     return result
