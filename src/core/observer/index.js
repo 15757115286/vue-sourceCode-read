@@ -311,8 +311,10 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
   // 第一个条件的意义是避免给Vue实例本身添加观测对象
   // 这里我们只有在对options.data进行observe的时候才会将asRootData设置为true
   // 这里第二个条件就是我们不能对根数据通过Vue.set添加实例。因为根数据（$data）
-  // 收集不到对应的依赖（没有使用defineReactive定义，在$data对象的属性发生变化的时候，
-  // 由于没有childOp去收集对应的属性变化的依赖）-> $data的依赖只能是watch手动的添加。
+  // 收集不到对应的依赖（没有使用defineReactive定义），所以使用this.key（这个操作可以理解为
+  // this._data.key）的时候由于data没有自己的闭包依赖，所以所有的模板依赖都无法收集到。
+  // 自然在使用Vue.set的时候触发不了对应依赖的响应式了。
+  // $data的依赖只能是watch手动的添加。
   // 所以从设计上来说也是没有必要去动态的设置$data的属性，我们可以预先设置属性为null。
   const ob = (target: any).__ob__
   if (target._isVue || (ob && ob.vmCount)) {

@@ -11,37 +11,46 @@
 
 <body>
     <h1>vue observe example</h1>
-    <div id="app">
-        {{ array[0] }}
-        <br>
-        {{ job.name3 || 'kong'}}
-        <br>
-        {{ array }}
+    <div id="app" :style="{'color':color}">
+        {{ interests.in3.in4 }}
     </div>
     <script>
         var vm = new Vue({
-            el:'#app',
+            el: '#app',
             data: {
                 name: 'xwt',
                 job: {
                     name1: 'javascript',
                     name2: 'java'
                 },
-                interests:{
-                    in1:'play games',
-                    in2:'play basketball'
+                interests: {
+                    in1: 'play games',
+                    in2: 'play basketball',
+                    in3: {
+                        in4: 'ddd'
+                    }
                 },
-                array:[1,2,3]
+                array: [1, 2, 3],
+                color: 'red'
             },
             watch: {
-                'job':function(v,ov){
-                    console.log(v,ov);
+                'job': function (v, ov) {
+                    console.log(v, ov);
                 }
             },
             created() {
+                // 这里的$nextTick不管嵌套多深，都在在UI渲染前完成，结果会影响到本次UI的渲染
+                this.$nextTick(() => {
+                    this.color = 'blue';
+                    this.$nextTick(() => {
+                        this.color = 'yellow';
+                    })
+                })
             }
         })
-        vm.job = vm.job;
+        // 这里打印的为true，很明显interests和in3的__ob__的dep里面都收集了这个渲染函数的依赖，当然还有
+        // interests.in3.in4这个闭包属性里面的dep里面也有这个依赖
+        console.log(vm.interests.__ob__.dep.subs[0] === vm.interests.in3.__ob__.dep.subs[0])
     </script>
 </body>
 

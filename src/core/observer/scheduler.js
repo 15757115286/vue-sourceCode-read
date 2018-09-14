@@ -17,6 +17,8 @@ const activatedChildren: Array<Component> = []
 let has: { [key: number]: ?true } = {}
 let circular: { [key: number]: number } = {}
 let waiting = false
+// 这个是一个标志。当放入队列queue中所有观察者将会在突变完成之后统一执行更新，
+// 当更新开始时会将flushing变量的值设置为true，代表此时已经在执行更新。
 let flushing = false
 let index = 0
 
@@ -128,10 +130,14 @@ function callActivatedHooks (queue) {
  * pushed when the queue is being flushed.
  */
 export function queueWatcher (watcher: Watcher) {
+  // 获取观察对象唯一的id
   const id = watcher.id
+  // 如果在has中没有存在这个watcher的id，has的作用就是避免相同的watcher入队
   if (has[id] == null) {
+    // 那么在has中加入这个watcher的id
     has[id] = true
     if (!flushing) {
+      // 把watcher推入任务队列
       queue.push(watcher)
     } else {
       // if already flushing, splice the watcher based on its id
@@ -143,9 +149,12 @@ export function queueWatcher (watcher: Watcher) {
       queue.splice(i + 1, 0, watcher)
     }
     // queue the flush
+    // 这里第一次的时候waiting为false，之后这个值就变成了true。
+    // 所以无论执行了多少次queueWatcher，下面的代码只会执行一次
     if (!waiting) {
       waiting = true
 
+      // 这里是同步执行观察者
       if (process.env.NODE_ENV !== 'production' && !config.async) {
         flushSchedulerQueue()
         return
