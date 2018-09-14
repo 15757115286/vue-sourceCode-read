@@ -34,19 +34,14 @@
                 array:[1,2,3]
             },
             watch: {
-                /* 'job.name1': function myWatch(newValue, oldValue) {
-                    console.log(`属性job.name1发生了变化，新值为${newValue}，旧值为${oldValue}`);
-                } */
+                'job':function(v,ov){
+                    console.log(v,ov);
+                }
             },
             created() {
-                console.log(this.job)
             }
         })
-        //vm.job.name1 = 'c++'
-        setTimeout(()=>{
-            Vue.set(vm.job,'name3','c#');
-        },1000)
-        vm.array.splice(0,0,'xwt')
+        vm.job = vm.job;
     </script>
 </body>
 

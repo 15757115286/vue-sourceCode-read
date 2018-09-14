@@ -207,6 +207,8 @@ export function defineReactive (
       const value = getter ? getter.call(obj) : val
       if (Dep.target) {
         // 这里的依赖是该属性的依赖，在属性的值改变的时候触发该依赖
+        // 对象子属性的依赖父级一定可以收集到，因为通过调用a.b.c的时候首先会去访问b
+        // 此时这个依赖会被b收集到，然后在调用b.c，依赖被c收集到
         dep.depend()
         if (childOb) {
           // 这里的childOb如果存在就是val.__ob.__，这里也需要收集依赖。
@@ -217,6 +219,15 @@ export function defineReactive (
           // 但是需要注意的是如果此时的val是一个数组，那么childOb就是val.__ob__，这个值还有印象吗？
           // 没错，就是我们在改变数组内容的7个方法里面就是通过this.__ob__.dep.notify()来触发依赖的
           // 所以说我们对修改数组内容的依赖操作到这里就收集完成了
+
+          // 这部操作也是为了Vue.set时候能够触发响应性所准备的。比如说有模板如下 {{ person.age }}
+          // 此时data:{ person:{ name:'xwt' } }。渲染函数在获取依赖的时候首先取的是data.person，这
+          // 个时候一切正常，因为person是响应性属性，此时依赖被收集到。在去获取age的时候，由于这个age
+          // 原先在person上不存在，更谈不上响应性，所以依赖不会收集。我们在使用Vue.set(person,age,18)
+          // 以后，set函数会响应person这个对象上的依赖。如果没有下面这一步，渲染函数仅仅只是被收集在了
+          // person这个属性的闭包里面，无法再Vue.set的时候访问这个依赖，所以我们需要在下一步把这个渲染
+          // 的依赖放置到childOb上面。这一步的操作只是为了在Vue.set触发对象不存在的属性的时候触发响应。
+          // 当然数组所有的响应都是靠这个完成的（splice、push等方法）
           childOb.dep.depend()
 
           // 上面说到数组内容的改变的操作已经完成，那么下面的dependArray是干嘛的呢？
@@ -319,6 +330,14 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
   }
 
   // 如果对象是响应式的，那么就为对象添加属性，并触发依赖
+  // 比说说模板里面有一个引用一个data.name.xwt，但是xwt不存在data上面
+  // 这时候因为xwt属性是不存在的，所以xwt属性无法收集属于自己的dep依赖
+  // 但是，重点来了，有没有发现我们在访问xwt的前面首先访问了name?
+  // 这里这个渲染函数的依赖同时被收集到了name.__ob__.dep里面了
+  // 所以当我们通过Vue.set(name,'xwt','good')的时候触发了name上所有的依赖，此时当获取name.xwt
+  // 的值的时候这个依赖也被name.xwt收集到，以后自己也是响应式了，真是棒棒的。
+  // 所以页面上的data.name.xwt占位符会渲染为good，而通过data.name.xwt = 'bad'
+  // 没有效果是因为那时候xwt是非响应性并且没有对象的属性依赖（通过Vue.set以后会重新生成自己的闭包属性依赖dep）
   defineReactive(ob.value, key, val)
   ob.dep.notify()
   return val
@@ -376,11 +395,20 @@ export function del (target: Array<any> | Object, key: any) {
 // 这里面记得数组和对象处理的差异吗？如果是一个数组，那么我们只会通过迭代来对是对象或数组的数组项进行observe操作
 // 但是如果是对象，那么会对对象的每一个property进行defineReactive操作，但是别忘记了，defineReactive也会进行observe操作的。
 // 所以唯一的区别是数组无法通过像 array[0]这样的方式来收集依赖。
-// 这里假设数据格式为 data:{ array:[1,2,{ name:'xwt' } , [3,4,5]] }
-// 而且如果我们动态的为数组中的一个对象或者数组设置一个通过Vue.set，如Vue.set(array[2],'age',18)
-// 此时认为数组是发生改变了的，因为数组中的内容发生了改变，但是数组是无法监听到的。因为Vue.set触发的。
-// 调用Vue.set的时候会触发对象的__ob__上的所有依赖，所以我们需要把修改数组的依赖放置到对象的__ob__上
-// 这就是dependArray的由来
+// 这里假设模板里面有这个一个 {{ array[0].name }}，但是此时我们array是这样的[{age:18,job:'vue'}]
+// 首先我们假设不使用dependArray去对数组的每个项收集依赖会如何？
+// 如果name一开始就存在于array[0]对象上那还好，因为对象每个属性都有着自己的依赖。当调用array[0].name = 'cm'
+// 还是会自动触发响应的（因为依赖被收集在了自己的属性闭包的dep里面了）
+// 但是这里的例子很遗憾，并没有name在array[0]上面。这个时候我们调用Vue.set(array[0],'name','xwt')来设置，
+// 当设置好以后，vue要触发对应的渲染函数的依赖了，这个时候却发现在array[0]上压根没有任何依赖被收集，对应的依赖在array上面
+// 因为渲染函数第一次收集依赖的时候，首先是data.array，没问题，array是响应式的，收集成功。当访问data.array[0]，抱歉，这里
+// 数组的访问形式不会被拦截器拦截到，甚至说根本没有拦截器，所以array[0]上根本收集不到渲染函数这个依赖。但是这并不意味着
+// array[0]上没有__ob__这个属性。这个属性是有的，因为array[0]是一个对象，在new Observe(array)的时候会通过observeArray(array)
+// 为每一个array的item添加监听对象__ob__。只是仅仅无法通过array[0].name这样的方式去和name相关的渲染函数收集依赖到array[0]而已
+// array自身的操作包括splice、push都是响应式的。
+// 所以原因分析明白了，这个函数的作用自然就很清晰了，我们现在能确定的就是array是能够收集所有的依赖的，我把这里的依赖在分发给
+// 我下面的每一个对象或者数组，记录在数组和对象的__ob__里面（不一定会用到，但肯定要用的时候会有）。如果是数组，在递归进行这个操作。
+// 而且这一步的操作仅仅是为了预防数组中某个对象的值一开始不存在，后面通过Vue.set设置后无法触发响应的解决罢了
 function dependArray (value: Array<any>) {
   for (let e, i = 0, l = value.length; i < l; i++) {
     e = value[i]

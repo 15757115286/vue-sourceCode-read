@@ -149,14 +149,24 @@ export function lifecycleMixin (Vue: Class<Component>) {
   }
 }
 
+// 最终是通过mountComponent函数来挂载组件的
+// 这个函数的作用可以简单的理解为把渲染函数生成的虚拟DOM渲染成真正DOM的函数
 export function mountComponent (
   vm: Component,
   el: ?Element,
   hydrating?: boolean
 ): Component {
+  // $el是组件模板根元素的引用，是template里面的根元素。
+  // 如果使用的是el来挂载，那么template为el节点的outHTMl
+
+  // 这里只是临时的把挂载元素赋值给了vm.$el，为了给虚拟DOM进行patch算法使用
+  // 真正的vm.$el会被patch给重写的
   vm.$el = el
+  // 如果组件上没有渲染函数
   if (!vm.$options.render) {
+    // 创建一个空的虚拟节点
     vm.$options.render = createEmptyVNode
+    // 如果存在不是以#字符开头的模板或者是el节点，那么在非生产环境会产生告警。
     if (process.env.NODE_ENV !== 'production') {
       /* istanbul ignore if */
       if ((vm.$options.template && vm.$options.template.charAt(0) !== '#') ||
@@ -175,10 +185,19 @@ export function mountComponent (
       }
     }
   }
+
+  // 调用生命周期钩子beforeMount
   callHook(vm, 'beforeMount')
 
+  // 开始挂载
+
+  // 声明一个局部的updateComponent变量，用来记录更新组件updateComponent的引用
+  // 这个函数在创建Watcher实例时候传给Watcher构造函数的第二个参数
   let updateComponent
   /* istanbul ignore if */
+
+  // 如果不是生产环境且支持performance的话，那么就开始更新组件的性能监测
+  // 分别统计了vm._render 和 vm._update的运行性能
   if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
     updateComponent = () => {
       const name = vm._name
@@ -197,6 +216,8 @@ export function mountComponent (
       measure(`vue ${name} patch`, startTag, endTag)
     }
   } else {
+    // 这里可以简单的认为vm._render是调用vm.$options.render生成虚拟节点VNode
+    // 而vm._update是把vm._render生成的虚拟节点渲染成真正的DOM节点
     updateComponent = () => {
       vm._update(vm._render(), hydrating)
     }
@@ -205,6 +226,12 @@ export function mountComponent (
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
+
+  // 创建观察者实例
+  // 正是因为Watcher对表达式的求值，出发了数据属性的get拦截器函数，从而收集到了依赖。
+  // 当数据变化时候能够触发响应性。我们把这个函数称作为渲染函数观察者。
+
+  // 在watcher观测到数据变化之后，触发更新之前调用beforeUpdate的声明周期钩子
   new Watcher(vm, updateComponent, noop, {
     before () {
       if (vm._isMounted) {
