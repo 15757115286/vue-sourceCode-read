@@ -110,6 +110,7 @@ export default class Watcher {
     if (typeof expOrFn === 'function') {
       this.getter = expOrFn
     } else {
+      // 如果是字符串，只支持类似于 a.b.c 这样子的，只能监听data上属性的变化
       this.getter = parsePath(expOrFn)
       if (!this.getter) {
         this.getter = function () {}
@@ -148,8 +149,8 @@ export default class Watcher {
         throw e
       }
     } finally {
-      // "touch" every property so they are all tracked as
-      // dependencies for deep watching
+      // 如果是深度观察，那么去访问value中的每一个属性（递归）,
+      // 这样可以让它们也收集到对应的依赖来达到深度观察
       if (this.deep) {
         traverse(value)
       }
@@ -186,7 +187,9 @@ export default class Watcher {
     }
   }
 
-  // 清理相关的依赖
+  // 清理已经废弃的依赖。从watcher上次的deps中知道上次引用该watcher的deps有哪些
+  // 从newDeps中知道本次有哪些deps依赖该watcher，然后从中找出差集就是已经不需要该
+  // watcher的依赖。使用dep.removeSub从这些依赖中删除该watcher
   cleanupDeps () {
     // 获取上次引用该watcher的所有依赖dep的长度
     let i = this.deps.length
@@ -223,6 +226,7 @@ export default class Watcher {
   // 第三种情况是是异步的观察者
   update () {
     /* istanbul ignore else */
+    // 如果是一个计算属性观察者
     if (this.computed) {
       // A computed property watcher has two modes: lazy and activated.
       // It initializes as lazy by default, and only becomes activated when
@@ -233,10 +237,17 @@ export default class Watcher {
         // so we simply mark the watcher as dirty. The actual computation is
         // performed just-in-time in this.evaluate() when the computed property
         // is accessed.
+        // 在惰性模式中（没有收集到任何依赖的时候），我们只需要把dirty设置为true，
+        // 告诉vue我的值已经变化过了（被触发过了），等到下次需要调用这个计算属性的
+        // 时候再去求值
         this.dirty = true
       } else {
+        // 这里一般收集的是渲染函数或者是另外一个计算属性的依赖
         // In activated mode, we want to proactively perform the computation
         // but only notify our subscribers when the value has indeed changed.
+        // 主动的去重新计算值，但是只有当值真正变化的时候才会触发依赖响应
+        // 因为我们还要去触发该计算属性的依赖，所以这里必须把值马上求出来，因为后面
+        // 的依赖需要用到这个值，所以我们要主动的计算
         this.getAndInvoke(() => {
           this.dep.notify()
         })
@@ -286,6 +297,9 @@ export default class Watcher {
       this.dirty = false
       // 执行回调函数，把老值和新值一起作为参数传入，并把回调函数的this指向为vm
       if (this.user) {
+        // 这里之所以把cb放置在try中执行那是因为cb在某些时候是用户定义的。
+        // 在$watch(expOrFn,cb,options)的时候并没有规定cb的类型，所以
+        // 某些时候cb还真可能不会函数，或者执行该函数会报错，所以必须放在try中执行
         try {
           cb.call(this.vm, value, oldValue)
         } catch (e) {
@@ -301,9 +315,14 @@ export default class Watcher {
    * Evaluate and return the value of the watcher.
    * This only gets called for computed property watchers.
    */
+
+   // 计算并返回watcher的值（包含了依赖的收集的过程（需要收集该计算属性的deps都会收集到该依赖））
   evaluate () {
+    // 当dirty为true的时候进行重新求值，否则返回之前watcher的值。初始值为true
     if (this.dirty) {
+      // 这里进行计算属性的求值并且依赖收集
       this.value = this.get()
+      // 并且把dirty设置为true，只有在执行watcher.update的时候才会把dirty恢复为true
       this.dirty = false
     }
     return this.value
@@ -312,6 +331,7 @@ export default class Watcher {
   /**
    * Depend on this watcher. Only for computed property watchers.
    */
+  // 收集这个watcher依赖，只有在计算属性的watchers才有效
   depend () {
     if (this.dep && Dep.target) {
       this.dep.depend()
@@ -321,18 +341,27 @@ export default class Watcher {
   /**
    * Remove self from all dependencies' subscriber list.
    */
+  // 从所有依赖该wathcher的依赖deps里面移除该watcher
   teardown () {
+    // 首先先判断该watcher是否处于激活状态，如果不是激活状态则什么都不需要做
     if (this.active) {
       // remove self from vm's watcher list
       // this is a somewhat expensive operation so we skip it
       // if the vm is being destroyed.
+
+      // 如果组件已经被销毁了，那么什么都不需要做。
+      // 如果组件没有被销毁，那么从组件中移除该watcher。
+      // 因为从组件的观察者列表中移除该观察者是一个昂贵的操作，所以仅仅当组件没有
+      // 被销毁的时候需要调用这个操作
       if (!this.vm._isBeingDestroyed) {
         remove(this.vm._watchers, this)
       }
       let i = this.deps.length
+      // 把上次收集依赖的时候所有依赖于该watcher的deps里面移除该watcher
       while (i--) {
         this.deps[i].removeSub(this)
       }
+      // 把watcher的激活状态变成false（不激活的状态）
       this.active = false
     }
   }

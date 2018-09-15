@@ -97,6 +97,7 @@ export function initMixin (Vue: Class<Component>) {
       measure(`vue ${vm._name} init`, startTag, endTag)
     }
 
+    // 每个vue实例都是在挂载的时候去调用updateComponent函数去收集对应的依赖
     if (vm.$options.el) {
       vm.$mount(vm.$options.el)
     }

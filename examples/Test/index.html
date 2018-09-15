@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>vue test</title>
+    <script src="../vue.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <my-h1 v-if="show"></my-h1>
+        <button @click="toggle()">点击</button>
+    </div>
+    <script>
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                show: true
+            },
+            components: {
+                myH1: {
+                    template: '<h1>vue mount测试</h1>',
+                    mounted() {
+                        console.log('mounted')
+                    },
+                    created() {
+                        console.log('created')
+                    },
+                    activated() {
+                        console.log('activated')
+                    },
+                    deactivated() {
+                        console.log('deactivated')
+                    },
+                    destroyed() {
+                        console.log('destroyed')
+                    }
+                }
+            },
+            methods: {
+                toggle() {
+                    this.show = !this.show;
+                }
+            }
+        })
+        vm.$watch(function(){
+            let obj1 = {};
+            let obj2 = {};
+            obj1.data = obj2;
+            obj2.data = obj1;
+            return obj1;
+        },function(){console.log('change')},{deep:false})
+    </script>
+</body>
+
+</html>
