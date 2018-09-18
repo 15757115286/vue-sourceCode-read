@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>props test</title>
+    <script src="../vue.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 注意，所有的大写字母都会被转化为驼峰式的 -->
+        <my-component :m-options="mOptions" :name="name"></my-component>
+        <button @click="mutateValue()">从父元素中修改prop对象的值</button>
+        <button @click="mutateValue1()">从父元素中修改prop简单类型的值</button>
+    </div>
+    <script>
+        /**
+         * 这个demo展示了如果传入子组件的prop是对象或者数组，子组件可以直接修改数组的或者对象中的内容
+         * 但是不能直接修改子组件中的props的值，否则会产生告警
+         **/
+        var vm = new Vue({
+            el:"#app",
+            data:{
+                mOptions:{
+                    name:'xwt'
+                },
+                name:'xwt'
+            },
+            methods:{
+                mutateValue(){
+                    this.mOptions.name += '1';
+                },
+                mutateValue1(){
+                    this.name += '1';
+                }
+            },
+            components:{
+                myComponent:{
+                    template:`
+                    <div id="my-component">
+                        <p>{{ mOptions.name }}</p>
+                        <p>{{ name }}</p>
+                        <button @click="mutatePropValue()">修改props对象中的内容</button>
+                        <button @click="mutatePropValue1()">直接修改prop对象的值</button>
+                        <button @click="mutatePropValue2()">修改prop简单类型的值</button>
+                    </div>`,
+                    props:{
+                        mOptions:{
+                            required:true
+                        },
+                        name:String
+                    },
+                    methods:{
+                        mutatePropValue(){
+                            this.mOptions.name += 2;
+                        },
+                        mutatePropValue1(){
+                            this.mOptions = {
+                                name:'cccc'
+                            };
+                        },
+                        mutatePropValue2(){
+                            this.name += 2;
+                        },
+                        mutatePropValue3(){
+                        },
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

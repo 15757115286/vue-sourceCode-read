@@ -90,6 +90,11 @@ export function initState(vm: Component) {
 }
 
 // 初始在props，其中propsOptions为合并后的options中的props属性的值
+// 猜测：如果是子组件上的prop引用父组件中的某个data，当父组件中的该值
+// 变化(基本类型的变化或者对象引用的变化)的时候，由于引用的时候收集了该依赖
+// 可能会重新渲染整个组件。如果该值是对象，仅仅改变对象内部的值，那么不会
+// 触发整个组件的重新渲染，因为子组件中的渲染依赖被收集在了该对象对应属性的内部dep。
+// 所以说子组件中修改prop中基本类型的值或者对象的引用会报错，而修改对象内部的属性则合法。
 function initProps(vm: Component, propsOptions: Object) {
   // 从vm.$options上获取propsData，如果没有就回退为一个空对象
   // 该propsData的作用就是用来存储外界组件数据。
@@ -107,8 +112,18 @@ function initProps(vm: Component, propsOptions: Object) {
   if (!isRoot) {
     // 修改的是shouldObserve的值。在observe函数的时候用到。如果shouldObserve的值为真，
     // 那么会调用new Observe，否则则不会
+
+    // 如果不是根组件的实例，那么props的值一般来自父组件，如果这个值本身是响应式的，那么
+    // 在observe的时候会直接返回已有的__ob__，我们依旧可以收集子组件的依赖。如果本身不是
+    // 响应式的，我们应该符合一致性，因为这个值是父组件的，我们不应该在子组件中强制把父组件
+    // 改成响应性的
+
+    // 如果vm实例是根组件的实例，就没有上面的限制。
     toggleObserving(false);
   }
+
+  // 不管vm实例是不是根组件实例，都会把props的每个key和value代理的vm实例上
+  // 并且props中的每个属性都是响应式的
   for (const key in propsOptions) {
     // 在vm.$options._propKeys中推入每一个prop的key
     keys.push(key);
@@ -116,7 +131,10 @@ function initProps(vm: Component, propsOptions: Object) {
     const value = validateProp(key, propsOptions, propsData, vm);
     /* istanbul ignore else */
     if (process.env.NODE_ENV !== "production") {
+      // 将驼峰式的key转化为用连字符连接的key
       const hyphenatedKey = hyphenate(key);
+
+      // 如果是保留的属性或者特性，在非生产环境下给出告警
       if (
         isReservedAttribute(hyphenatedKey) ||
         config.isReservedAttr(hyphenatedKey)
@@ -126,6 +144,8 @@ function initProps(vm: Component, propsOptions: Object) {
           vm
         );
       }
+
+      // 如果在非生产环境直接改变props的内容会产生告警
       defineReactive(props, key, value, () => {
         if (vm.$parent && !isUpdatingChildComponent) {
           warn(
@@ -143,10 +163,17 @@ function initProps(vm: Component, propsOptions: Object) {
     // static props are already proxied on the component's prototype
     // during Vue.extend(). We only need to proxy props defined at
     // instantiation here.
+
+    // 在props中的内容代理到vm实例上。这里的操作是针对子组件的优化操作，
+    // 对于子组件来讲这个代理工作在创建子组件构造函数时就完成了，即在 Vue.extend 函数中完成的，
+    // 这么做的目的是避免每次创建子组件实例时都会调用 proxy 函数去做代理
+    // 摘自 —— vue技术内幕
     if (!(key in vm)) {
       proxy(vm, `_props`, key);
     }
   }
+
+  // 在把shouldObserve恢复为true，不影响后续的使用
   toggleObserving(true);
 }
 

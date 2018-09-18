@@ -54,7 +54,7 @@ export function initRender (vm: Component) {
   // $listeners被修改的时候调用customSetter，如果isUpdatingChildComponent为false，告诉开发者这两个属性是可读的
 
   // 这里的isUpdateChildCompoent这个值只有在updateComponent的时候（非生产环境）为真，这个时候vue会为
-  // vm的$attrs和$listeners赋值，赋值完以后这个值又编程false。
+  // vm的$attrs和$listeners赋值，赋值完以后这个值又变成false。
   // isUpdateChildCompoent只有在非生产环境值才会改变，否则一直为false。但是生产环境中会走if的分支，也不会用到这个值
   if (process.env.NODE_ENV !== 'production') {
     defineReactive(vm, '$attrs', parentData && parentData.attrs || emptyObject, () => {
