@@ -18,14 +18,17 @@ type PropOptions = {
   validator: ?Function
 };
 
+// 用来校验名字(key)给定的 prop 数据是否符合预期的类型，并返回相应 prop 的值(或默认值)
 export function validateProp (
   key: string,
   propOptions: Object,
   propsData: Object,
   vm?: Component
 ): any {
+  // 获取options中对应key的prop的内容，如{ type:Number ,required:true ,... }
   const prop = propOptions[key]
   const absent = !hasOwn(propsData, key)
+  // 获取外界传入组件的值
   let value = propsData[key]
   // boolean casting
   const booleanIndex = getTypeIndex(Boolean, prop.type)

@@ -400,7 +400,7 @@ function normalizeInject (options: Object, vm: ?Component) {
 
 //格式化原生的指令函数变成对象格式
 //一般来说定义的指令的值为一个对象，其中包括了bind、inserted、update、componentUpdate、unbind这几个钩子函数
-//但是这里同样指令的值可以为一个函数，这种情况下默认会添加bind和update2个钩子函数
+//但是这里同样指令的值可以为一个函数，这种情况下默认会添加bind和update 2个钩子函数
 function normalizeDirectives (options: Object) {
   const dirs = options.directives
   if (dirs) {

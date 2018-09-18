@@ -57,6 +57,11 @@ export function initState(vm: Component) {
   const opts = vm.$options;
 
   // 重点来了，我们在created中使用props的值是在这里加载的
+  // 由此可见，props是所有vue中状态中最先加载的，所以后续的加载中都可以引用props的。
+  // 在是这里还是需要注意的,initInjections运行时在整个initState之前，所以自动注入
+  // 的内容是最先被加载到vue实例上的。
+
+  // 进行props的注入
   if (opts.props) initProps(vm, opts.props);
 
   // 重点来了，我们在created中使用methods的值是在这里加载的
@@ -65,6 +70,7 @@ export function initState(vm: Component) {
   // 在这里初始化data的数据。因为initProps在initData之前，所以这就是为什么我们
   // 可以用props的值去初始化data的值的原因
   // 我们Vue实例中原型上的$data就是代理的vm._data这个值
+  // 由 initData -> observe(data) -> Watcher -> 响应性原理
   if (opts.data) {
     // 如果在vm.$options上存在data属性，那么使用initData方法去初始化vm的data
     initData(vm);
@@ -83,19 +89,30 @@ export function initState(vm: Component) {
   }
 }
 
+// 初始在props，其中propsOptions为合并后的options中的props属性的值
 function initProps(vm: Component, propsOptions: Object) {
+  // 从vm.$options上获取propsData，如果没有就回退为一个空对象
+  // 该propsData的作用就是用来存储外界组件数据。
   const propsData = vm.$options.propsData || {};
+  // 在vm实例上定义一个_props属性，该属性的值为一个空对象，并创建一个本地变量props记录该对象
   const props = (vm._props = {});
   // cache prop keys so that future props updates can iterate using Array
   // instead of dynamic object key enumeration.
+
+  // 在vm.$options上定义一个_propKeys属性并赋值为一个空数组，并在本地定义一个keys变量记录该数组
   const keys = (vm.$options._propKeys = []);
+  // 创建一个本地变量来记录该vm是否是根实例（如果该vm实例没有父实例的话）
   const isRoot = !vm.$parent;
   // root instance props should be converted
   if (!isRoot) {
+    // 修改的是shouldObserve的值。在observe函数的时候用到。如果shouldObserve的值为真，
+    // 那么会调用new Observe，否则则不会
     toggleObserving(false);
   }
   for (const key in propsOptions) {
+    // 在vm.$options._propKeys中推入每一个prop的key
     keys.push(key);
+    // 验证key和value是否是符合预期，并返回value或者默认值
     const value = validateProp(key, propsOptions, propsData, vm);
     /* istanbul ignore else */
     if (process.env.NODE_ENV !== "production") {
