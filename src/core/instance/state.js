@@ -289,6 +289,11 @@ function initComputed(vm: Component, computed: Object) {
       // 为计算属性创建一个内部的观察者，称为计算属性的观察者，同时会把
       // 这个观察者添加到vm实例的_computedWatchers中去。这里在定义watcher
       // 的时候options中的computed字段设置为true，证明是一个计算属性的观察者
+
+      // 这里创建的是计算属性的观察者，和普通观察者所有不同的是计算属性的观察者
+      // 多了一个自己的dep，并且不会立马进行求值和依赖的收集。它会在需要进行cache
+      // 的计算属性中进行依赖收集，收集到自己的dep中去，然后进行watcher.evaluate
+      // 进行求值和依赖收集
       watchers[key] = new Watcher(
         vm,
         getter || noop,
